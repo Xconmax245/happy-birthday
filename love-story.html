@@ -270,21 +270,6 @@
   <script src="js/animations.js"></script>
   <script src="js/audio-manager.js"></script>
   
-  <script>
-    function toggleTimeline(eventId) {
-      const item = document.querySelector(`.timeline-item[data-id="${eventId}"]`);
-      if (!item) return;
-      item.classList.toggle('open');
-      State.toggleTimelineCard(eventId);
-    }
 
-    document.addEventListener('DOMContentLoaded', function() {
-      const openCards = State.getOpenTimelineCards();
-      openCards.forEach(id => {
-        const item = document.querySelector(`.timeline-item[data-id="${id}"]`);
-        if (item) item.classList.add('open');
-      });
-    });
-  </script>
 </body>
 </html>
