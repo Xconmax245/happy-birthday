@@ -23,13 +23,16 @@ const AudioManager = (function() {
     const savedState = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (savedState) {
       audio.currentTime = savedState.currentTime || 0;
-      isPlaying = savedState.isPlaying || false;
+      // Respect user's choice, but safe-guard type
+      isPlaying = typeof savedState.isPlaying === 'boolean' ? savedState.isPlaying : true;
+    } else {
+      isPlaying = true; // Auto-play for first-time visitors
     }
 
     // Create UI Control
     createMusicControl();
 
-    // If it was playing, try to resume (might be blocked by browser until interaction)
+    // If it should be playing, try to resume (might be blocked by browser until interaction)
     if (isPlaying) {
       attemptPlay();
     }
@@ -41,18 +44,24 @@ const AudioManager = (function() {
       }
     }, 1000);
 
-    // Global interaction listener to clear autoplay blocks AND start music if needed
+    // Global interaction listener to resume playback if blocked
     const handleInteraction = () => {
-        if (!isPlaying) {
-            startMusic();
-        } else if (audio.paused) {
+        // Only resume if we WANT to play but are blocked
+        if (isPlaying && audio.paused) {
             attemptPlay();
+        }
+        
+        // Remove listeners if successfully playing
+        if (!audio.paused) {
+             ['click', 'touchstart', 'keydown'].forEach(evt => 
+               document.removeEventListener(evt, handleInteraction)
+             );
         }
     };
 
-    document.addEventListener('click', handleInteraction);
-    document.addEventListener('touchstart', handleInteraction);
-    document.addEventListener('keydown', handleInteraction);
+    ['click', 'touchstart', 'keydown'].forEach(evt => 
+       document.addEventListener(evt, handleInteraction)
+    );
   }
 
   function saveState() {
@@ -64,8 +73,9 @@ const AudioManager = (function() {
   }
 
   function attemptPlay() {
+    if (!audio.paused) return; // Prevent stutter if called while playing
     audio.play().catch(err => {
-      console.log('Autoplay blocked. Waiting for interaction.');
+      // Autoplay blocked, waiting for interaction
     });
   }
 
@@ -100,7 +110,10 @@ const AudioManager = (function() {
 
     document.body.appendChild(control);
 
-    control.querySelector('button').addEventListener('click', toggleMusic);
+    control.querySelector('button').addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMusic();
+    });
     updateUI();
   }
 

@@ -50,12 +50,31 @@ const Router = (function () {
   function setupNavigation() {
     // Intercept all internal links
     document.addEventListener('click', (e) => {
+      // Handle anchor tags (e.g. "Let's Go" button)
       const link = e.target.closest('a');
-      if (link && link.href && link.href.includes(window.location.origin)) {
-        // Prepare for link navigation (not used much in this app but good for robustness)
-        // ...
+      
+      // Robust check for internal links (supports file:// protocol)
+      if (link) {
+        const href = link.getAttribute('href');
+        // Ignore external links, anchors, or empty links
+        if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return;
+        
+        // Ignore if opening in new tab or specific download
+        if (link.target === '_blank' || link.hasAttribute('download')) return;
+
+        e.preventDefault();
+        
+        // Handle simple relative paths like "love-story.html"
+        // If href contains path, get just the filename
+        const pageName = href.split('/').pop() || CONFIG.defaultPage;
+        
+        if (pageName && pageName !== currentPage) {
+          navigateTo(pageName);
+        }
+        return;
       }
       
+      // Handle navigation buttons (bottom nav)
       const navItem = e.target.closest(CONFIG.navItemSelector);
       if (navItem) {
         e.preventDefault();
