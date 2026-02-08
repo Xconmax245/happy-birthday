@@ -33,6 +33,7 @@
     const kissCountEl = document.getElementById('kiss-count');
     const kissMessageEl = document.getElementById('kiss-message');
     const continueBtn = document.getElementById('continue-btn');
+    const revealContinueBtn = document.getElementById('reveal-continue-btn');
     
     // Reset state for new page load
     isOpened = false;
@@ -83,18 +84,32 @@
       }, 400);
       
       // Show reveal modal after box opens
+      // Show reveal modal after box opens
       setTimeout(() => {
-        if(revealModal) revealModal.classList.add('show');
-        
-        // Auto transition to cake section after 3 seconds
-        setTimeout(() => {
-          if(revealModal) revealModal.classList.remove('show');
-          setTimeout(() => {
-            if(cakeSection) cakeSection.classList.add('show');
-          }, 500);
-        }, 3000);
+        if(revealModal) {
+            revealModal.classList.add('show');
+            // If button exists, it handles the close. If not (fallback), auto close.
+            if (!revealContinueBtn) {
+                setTimeout(() => {
+                    closeRevealModal();
+                }, 5000); // 5 seconds fallback
+            }
+        }
       }, 1000);
     };
+
+    function closeRevealModal() {
+        if(revealModal) revealModal.classList.remove('show');
+        setTimeout(() => {
+            if(cakeSection) cakeSection.classList.add('show');
+        }, 500);
+    }
+
+    if (revealContinueBtn) {
+        revealContinueBtn.onclick = function() {
+            closeRevealModal();
+        };
+    }
 
     if (cakeContainer) {
         cakeContainer.onclick = function(e) {
