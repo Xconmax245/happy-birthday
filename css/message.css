@@ -1,0 +1,15 @@
+/* =====================================================================
+   MESSAGE PAGE ANIMATIONS
+   ===================================================================== */
+
+@keyframes heartPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.letter-signature {
+  font-family: 'Dancing Script', cursive; /* Optional: if you want a signature font */
+  font-size: 1.2rem;
+  color: var(--color-rose);
+  margin-top: var(--spacing-xl);
+}

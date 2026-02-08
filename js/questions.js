@@ -307,6 +307,7 @@
 
   // Expose globally for debugging
   window.Questions = {
+    init,
     loadQuestion,
     loadNextQuestion,
     flipCard,

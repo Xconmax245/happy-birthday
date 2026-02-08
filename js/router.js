@@ -172,10 +172,6 @@ const Router = (function () {
     // Trigger custom event for other scripts to re-init
     document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page: pageName } }));
     
-    // Manually trigger specific page inits if they expose global methods
-    if (pageName === 'questions.html' && window.Questions && window.Questions.init) {
-       window.Questions.init();
-    }
     // Note: Most scripts currently use DOMContentLoaded. 
     // We will need to update them to listen to 'page:loaded' as well.
   }

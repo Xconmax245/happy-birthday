@@ -1,29 +1,30 @@
 /* ==========================================================================
    MESSAGE - Love Letter Logic
-   Handles text reveal animations and final modal
    ========================================================================== */
 
-const Message = (function() {
+(function() {
   'use strict';
 
-  let observer;
   let modalShown = false;
+  let observer;
 
   function init() {
-    // Only run on message page
-    if (!document.querySelector('.letter-container')) return;
-    
-    // Reset state on re-init
-    modalShown = false;
-    
-    // Disconnect old observer if exists
-    if (observer) {
-      observer.disconnect();
-    }
+    const finalModal = document.getElementById('final-modal');
+    // If not on message page, do nothing
+    if (!finalModal) return;
 
     const paragraphs = document.querySelectorAll('[data-reveal]');
-    const finalModal = document.getElementById('final-modal');
     const closeModalBtn = document.getElementById('close-modal-btn');
+    
+    // Reset state each time
+    modalShown = false;
+    finalModal.classList.remove('active');
+    document.body.style.overflow = '';
+
+    // Disconnect old observer if exists
+    if (observer) {
+        observer.disconnect();
+    }
 
     // Setup scroll reveal for paragraphs
     observer = new IntersectionObserver((entries) => {
@@ -33,98 +34,71 @@ const Message = (function() {
           observer.unobserve(entry.target);
 
           // Check if this is the last paragraph
-          // Wait a bit to ensure DOM update, then check visibility
-          setTimeout(() => {
-             const allVisible = Array.from(paragraphs).every(p => p.classList.contains('visible'));
-             if (allVisible && !modalShown) {
-               // Verify we are still on the page
-               if (document.getElementById('final-modal')) {
-                   setTimeout(() => {
-                     showFinalModal(finalModal);
-                   }, 1800);
-               }
-             }
-          }, 100);
+          const allVisible = Array.from(paragraphs).every(p => p.classList.contains('visible'));
+          if (allVisible && !modalShown) {
+            setTimeout(() => {
+              showFinalModal(finalModal);
+            }, 1800);
+          }
         }
       });
     }, {
-      threshold: 0.2, // Slightly lower threshold for better mobile triggers
-      rootMargin: '0px 0px -20px 0px'
+      threshold: 0.3,
+      rootMargin: '0px 0px -30px 0px'
     });
 
     paragraphs.forEach((p, index) => {
-      // Clean up previous inline styles if re-initializing
+      p.classList.remove('visible');
       p.style.transitionDelay = `${index * 80}ms`;
-      p.classList.remove('visible'); // Reset visibility for animation replay? 
-      // Actually, if re-visiting, maybe we want to see them again? 
-      // Yes, clear visible class.
       observer.observe(p);
     });
 
-    setupModalListeners(finalModal, closeModalBtn);
-    
+    if (closeModalBtn) {
+      closeModalBtn.onclick = () => closeFinalModal(finalModal);
+    }
+
+    // Event delegation (or overwrite onclick)
+    finalModal.onclick = function(e) {
+      if (e.target === finalModal) {
+        closeFinalModal(finalModal);
+      }
+    };
+
+    // Use named handler for easy removal
+    document.removeEventListener('keydown', handleEsc);
+    document.addEventListener('keydown', handleEsc);
+
+    function handleEsc(e) {
+        if (e.key === 'Escape' && finalModal.classList.contains('active')) {
+          closeFinalModal(finalModal);
+        }
+    }
+
     console.log('[Message] Initialized');
   }
 
   function showFinalModal(modal) {
-    if (modalShown || !modal) return;
+    if (modalShown) return;
     modalShown = true;
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
   }
 
   function closeFinalModal(modal) {
-    if (!modal) return;
     modal.classList.remove('active');
     document.body.style.overflow = '';
   }
 
-  function setupModalListeners(modal, btn) {
-    if (!modal) return;
-
-    if (btn) {
-      // Remove old listeners to prevent duplicates?
-      // Cloning node is nuclear option. Better to just add listener.
-      // Since SPA reloads script scope? No. 
-      // Message module is persistent.
-      
-      const newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
-      newBtn.addEventListener('click', () => closeFinalModal(modal));
-    }
-
-    // Modal background click
-    // We can't clone body. But we can handle event delegation or single listener logic.
-    // If we init repeatedly, we add multiple listeners to 'finalModal' if we aren't careful?
-    // Wait, 'finalModal' element is REPLACED by router on nav.
-    // So distinct DOM element. New listener is fine.
-    
-    modal.addEventListener('click', function(e) {
-      if (e.target === modal) {
-        closeFinalModal(modal);
-      }
-    });
-
-    // Keydown is global. We should handle it carefully.
-    // We can add a named function.
-    document.addEventListener('keydown', (e) => handleKeydown(e, modal));
-  }
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', init);
   
-  function handleKeydown(e, modal) {
-      if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
-        closeFinalModal(modal);
-      }
-  }
+  // Re-initialize on SPA navigation
+  document.addEventListener('page:loaded', (e) => {
+    if (e.detail.page === 'message.html') init();
+  });
 
-  return { init };
+  window.Message = {
+    init: init
+  };
+
 })();
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => { 
-    Message.init();
-});
-
-// Re-initialize on SPA navigation
-document.addEventListener('page:loaded', (e) => {
-  if (e.detail.page === 'message.html') Message.init();
-});
