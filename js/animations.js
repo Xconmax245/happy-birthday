@@ -392,3 +392,8 @@ const Animations = (function() {
 document.addEventListener('DOMContentLoaded', function() {
   Animations.init();
 });
+
+// Re-initialize on SPA navigation
+document.addEventListener('page:loaded', () => {
+  Animations.init();
+});
