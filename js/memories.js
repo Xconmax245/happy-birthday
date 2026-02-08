@@ -27,11 +27,51 @@ const Memories = (function() {
       }
     });
 
-    // Videos
-    const videos = document.querySelectorAll('.memory-video');
-    videos.forEach(video => {
-      video.addEventListener('loadeddata', () => video.classList.add('loaded'));
-    });
+    // Videos - Lazy Load & Auto-Play/Pause
+    const videos = document.querySelectorAll('.memory-video.lazy-video');
+    
+    if ('IntersectionObserver' in window) {
+      const videoObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+          // If video is intersecting
+          if (entry.isIntersecting) {
+            const video = entry.target;
+            // Load if not loaded
+            if (video.preload === 'none') {
+               video.preload = 'metadata';
+            }
+            
+            // Play
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+              playPromise.catch(error => {
+                // Auto-play was prevented
+                console.log("Auto-play prevented");
+              });
+            }
+            video.classList.add('playing');
+          } else {
+            // Pause if not intersecting
+            const video = entry.target;
+            video.pause();
+            video.classList.remove('playing');
+          }
+        });
+      }, {
+        rootMargin: '50px 0px',
+        threshold: 0.25
+      });
+
+      videos.forEach(video => {
+        videoObserver.observe(video);
+      });
+    } else {
+      // Fallback for older browsers
+      videos.forEach(video => {
+        video.preload = 'metadata';
+        video.play(); 
+      });
+    }
   }
 
   function setupLightbox() {
