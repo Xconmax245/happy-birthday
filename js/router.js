@@ -1,27 +1,19 @@
 /* ==========================================================================
-   ROUTER - JavaScript Page Swapping System
-   Handles smooth transitions between pages without full page reloads
+   ROUTER - SPA Navigation System
+   Handles seamless page transitions without reloading to keep music playing
    ========================================================================== */
 
-/**
- * Router Module
- * Controls navigation and page transitions with fade effects
- */
 const Router = (function () {
   "use strict";
 
-  // --------------------------------------------------------------------------
-  // Configuration
-  // --------------------------------------------------------------------------
   const CONFIG = {
-    transitionDuration: 450, // Duration of fade transition in ms
+    transitionDuration: 400,
     contentSelector: "#page-content",
     navSelector: ".bottom-nav",
     navItemSelector: ".nav-item",
     defaultPage: "index.html",
   };
 
-  // Page mapping for navigation items
   const PAGES = {
     "index.html": "nav-home",
     "love-story.html": "nav-story",
@@ -31,169 +23,145 @@ const Router = (function () {
     "message.html": "nav-message",
   };
 
-  // --------------------------------------------------------------------------
-  // State
-  // --------------------------------------------------------------------------
   let currentPage = "";
   let isTransitioning = false;
 
-  // --------------------------------------------------------------------------
-  // Core Functions
-  // --------------------------------------------------------------------------
-
-  /**
-   * Initialize the router
-   * Sets up event listeners and determines current page
-   */
   function init() {
-    // Determine current page from URL
     currentPage = getCurrentPageName();
-
-    // Update navigation state
     updateActiveNav(currentPage);
-
-    // Save current page to session storage
-    saveLastVisitedPage(currentPage);
-
-    // Setup navigation click handlers
     setupNavigation();
-
-    // Add fade-in animation to current page
+    
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', handlePopState);
+    
+    // Initial fade in
     const content = document.querySelector(CONFIG.contentSelector);
-    if (content) {
-      content.classList.add("fade-in");
-    }
-
-    console.log("[Router] Initialized on page:", currentPage);
+    if (content) content.classList.add("fade-in");
+    
+    console.log("[Router] SPA Initialized on:", currentPage);
   }
 
-  /**
-   * Get the current page name from the URL
-   * @returns {string} Current page filename
-   */
   function getCurrentPageName() {
     const path = window.location.pathname;
     const page = path.substring(path.lastIndexOf("/") + 1);
     return page || CONFIG.defaultPage;
   }
 
-  /**
-   * Setup click handlers for navigation items
-   */
   function setupNavigation() {
-    const navItems = document.querySelectorAll(CONFIG.navItemSelector);
-
-    navItems.forEach((item) => {
-      item.addEventListener("click", handleNavClick);
+    // Intercept all internal links
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a');
+      if (link && link.href && link.href.includes(window.location.origin)) {
+        // Prepare for link navigation (not used much in this app but good for robustness)
+        // ...
+      }
+      
+      const navItem = e.target.closest(CONFIG.navItemSelector);
+      if (navItem) {
+        e.preventDefault();
+        const targetPage = navItem.dataset.page;
+        if (targetPage && targetPage !== currentPage) {
+          navigateTo(targetPage);
+        }
+      }
     });
+
+    // Also handle direct .nav-item clicks if necessary (covered above)
   }
 
-  /**
-   * Handle navigation item click
-   * @param {Event} event - Click event
-   */
-  function handleNavClick(event) {
-    event.preventDefault();
-
-    // Prevent multiple transitions
-    if (isTransitioning) return;
-
-    const targetPage = event.currentTarget.dataset.page;
-
-    // Don't navigate to current page
-    if (targetPage === currentPage) return;
-
-    // Navigate to the target page
-    navigateTo(targetPage);
+  function handlePopState() {
+    currentPage = getCurrentPageName();
+    updateActiveNav(currentPage);
+    loadContent(currentPage, false); // Load without pushing state
   }
 
-  /**
-   * Navigate to a new page with transition effect
-   * @param {string} pageName - Target page filename
-   */
   function navigateTo(pageName) {
     if (isTransitioning) return;
-
     isTransitioning = true;
 
     const content = document.querySelector(CONFIG.contentSelector);
-
-    if (!content) {
-      // Fallback: direct navigation
-      window.location.href = pageName;
-      return;
-    }
-
-    // Start fade out
+    
+    // Start transition
     content.classList.remove("fade-in");
     content.classList.add("fade-out");
 
-    console.log("[Router] Navigating to:", pageName);
-
-    // After fade out completes, navigate to new page
     setTimeout(() => {
-      // Save the page we're navigating to
-      saveLastVisitedPage(pageName);
-
-      // Navigate to new page
-      window.location.href = pageName;
+      loadContent(pageName, true);
     }, CONFIG.transitionDuration);
   }
 
-  /**
-   * Update the active state of navigation items
-   * @param {string} page - Current page filename
-   */
+  async function loadContent(pageName, pushState = true) {
+    try {
+      console.log(`[Router] Fetching ${pageName}...`);
+      const response = await fetch(pageName);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const html = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      
+      // Extract new content
+      const newContent = doc.querySelector(CONFIG.contentSelector).innerHTML;
+      const contentContainer = document.querySelector(CONFIG.contentSelector);
+      
+      // Update DOM
+      contentContainer.innerHTML = newContent;
+      
+      // Update URL
+      if (pushState) {
+        window.history.pushState({}, '', pageName);
+      }
+      currentPage = pageName;
+      sessionStorage.setItem("lastVisitedPage", pageName);
+
+      // Update UI
+      updateActiveNav(pageName);
+      
+      // Fade in
+      contentContainer.classList.remove("fade-out");
+      contentContainer.classList.add("fade-in");
+      
+      // Re-initialize scripts for the new page
+      reinitScripts(pageName);
+      
+      // Scroll to top
+      window.scrollTo(0, 0);
+
+      isTransitioning = false;
+
+    } catch (err) {
+      console.error("[Router] Navigation failed:", err);
+      window.location.href = pageName; // Fallback to full reload
+    }
+  }
+
   function updateActiveNav(page) {
     const navItems = document.querySelectorAll(CONFIG.navItemSelector);
     const activeNavId = PAGES[page];
-
     navItems.forEach((item) => {
       item.classList.remove("active");
-
-      if (item.id === activeNavId) {
-        item.classList.add("active");
-      }
+      if (item.id === activeNavId) item.classList.add("active");
     });
   }
 
-  /**
-   * Save the last visited page to session storage
-   * @param {string} page - Page filename
-   */
-  function saveLastVisitedPage(page) {
-    try {
-      sessionStorage.setItem("lastVisitedPage", page);
-    } catch (e) {
-      console.warn("[Router] Could not save to sessionStorage:", e);
+  function reinitScripts(pageName) {
+    // Re-initialize AOS
+    if (window.AOS) {
+      setTimeout(() => window.AOS.refreshHard(), 100);
     }
+
+    // Trigger custom event for other scripts to re-init
+    document.dispatchEvent(new CustomEvent('page:loaded', { detail: { page: pageName } }));
+    
+    // Manually trigger specific page inits if they expose global methods
+    if (pageName === 'questions.html' && window.Questions && window.Questions.init) {
+       window.Questions.init();
+    }
+    // Note: Most scripts currently use DOMContentLoaded. 
+    // We will need to update them to listen to 'page:loaded' as well.
   }
 
-  /**
-   * Get the last visited page from session storage
-   * @returns {string|null} Last visited page or null
-   */
-  function getLastVisitedPage() {
-    try {
-      return sessionStorage.getItem("lastVisitedPage");
-    } catch (e) {
-      console.warn("[Router] Could not read from sessionStorage:", e);
-      return null;
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // Public API
-  // --------------------------------------------------------------------------
-  return {
-    init,
-    navigateTo,
-    getCurrentPage: getCurrentPageName,
-    getLastVisitedPage,
-  };
+  return { init, navigateTo };
 })();
 
-// Initialize router when DOM is ready
-document.addEventListener("DOMContentLoaded", function () {
-  Router.init();
-});
+document.addEventListener("DOMContentLoaded", () => Router.init());

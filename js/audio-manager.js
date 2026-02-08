@@ -41,12 +41,18 @@ const AudioManager = (function() {
       }
     }, 1000);
 
-    // Global interaction listener to clear autoplay blocks
-    document.addEventListener('click', () => {
-        if (isPlaying && audio.paused) {
+    // Global interaction listener to clear autoplay blocks AND start music if needed
+    const handleInteraction = () => {
+        if (!isPlaying) {
+            startMusic();
+        } else if (audio.paused) {
             attemptPlay();
         }
-    }, { once: false });
+    };
+
+    document.addEventListener('click', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
   }
 
   function saveState() {

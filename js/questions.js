@@ -39,8 +39,7 @@
   let card, questionText, answerInput, counterEl, progressDots;
   let flipBtn, flipBtnBack, saveBtn, nextBtn, shareBtn, savedMsg;
 
-  // Initialize when DOM is ready
-  document.addEventListener('DOMContentLoaded', function() {
+  function init() {
     // Only run on questions page
     if (!document.getElementById('question-card')) return;
 
@@ -71,6 +70,14 @@
     loadQuestion(0);
 
     console.log('[Questions] Initialized');
+  }
+
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', init);
+  
+  // Re-initialize on SPA navigation
+  document.addEventListener('page:loaded', (e) => {
+    if (e.detail.page === 'questions.html') init();
   });
 
   // Build progress indicator dots

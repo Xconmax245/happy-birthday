@@ -109,6 +109,11 @@ const Memories = (function() {
   return { init, openLightbox, closeLightbox };
 })();
 
+
 document.addEventListener('DOMContentLoaded', function() {
-  if (document.querySelector('.memory-grid')) Memories.init();
+  if (document.querySelector('.memory-gallery') || document.querySelector('.memory-grid')) Memories.init();
+});
+
+document.addEventListener('page:loaded', (e) => {
+  if (e.detail.page === 'memories.html') Memories.init();
 });
